@@ -1,6 +1,7 @@
 package gortex
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jnfeinstein/gorm"
 	"regexp"
@@ -153,4 +154,46 @@ func SetFuzzySearchLimit(db *gorm.DB, limit float64) error {
 
 func NewCustomSearchScope(format SearchSqlFormat, clause interface{}, opts ...map[string]interface{}) func(*gorm.DB) *gorm.DB {
 	return makeSearchScope(format, clause, opts...)
+}
+
+func AutoIndex(db *gorm.DB, language string, clause interface{}, table ...string) error {
+	var fields []string
+	var actualTable string
+
+	scope := db.NewScope(nil)
+
+	switch value := clause.(type) {
+	case string:
+		if len(table) == 0 {
+			return errors.New("Table argument is required when clause is type string")
+		}
+		fields = append(fields, value)
+		actualTable = table[0]
+	case []string:
+		if len(table) == 0 {
+			return errors.New("Table argument is required when clause is type []string")
+		}
+		fields = value
+		actualTable = table[0]
+	case interface{}:
+		newScope := db.NewScope(value)
+		actualTable = newScope.TableName()
+		for _, field := range newScope.Fields() {
+			if field.IsPrimaryKey {
+				continue
+			}
+			fields = append(fields, field.DBName)
+		}
+	}
+
+	for _, field := range fields {
+		idxName := fmt.Sprintf("idx_%v_%v", actualTable, field)
+		query := fmt.Sprintf("CREATE INDEX %v on %v using gin(to_tsvector('%v', %v))", idxName, scope.Quote(actualTable), language, scope.Quote(field))
+		err := db.Debug().Exec(query).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

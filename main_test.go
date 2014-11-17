@@ -44,6 +44,7 @@ func init() {
 func setupDB() {
 	DB.DropTableIfExists(Note{})
 	DB.AutoMigrate(Note{})
+	gortex.AutoIndex(&DB, "english", Note{})
 	DB.Delete(Note{})
 	DB.Save(&foxNote).Save(&grassNote)
 }
