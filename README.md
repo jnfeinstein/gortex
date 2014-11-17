@@ -12,23 +12,10 @@ Text search for postgres w/ ORM using Golang
 * You can even make your own types of search
 * Generated scopes have no state so they can be used repeatedly
 
-## Usage
-```go
-gortex.NewSearchScope(language string, exclusive bool, clause {}interface)
-```
-#### Params
-```language string``` Specify [language](http://blog.lostpropertyhq.com/postgres-full-text-search-is-good-enough/#languagesupport) for search
-
-```exclusive bool``` Controls whether search fields should be AND'd or OR'd
-
-```clause {}interface``` May be a ```struct``` or ```map[string]{}interface``` which specifies the fields and values to search
-
-Note: If ```clause``` is a ```struct```, it will automatically set the table to the struct's type
-
 ## Example setup
 ```go
 import (
-  "github.com/jinzhu/gorm"
+  "github.com/jnfeinstein/gorm"
   "github.com/jnfeinstein/gortex"
   _ "github.com/lib/pq"
 )
@@ -39,25 +26,56 @@ type Note struct {
   Author   string
 }
 
-DB, _ := gorm.Open("postgres", "dbname=gortex sslmode=disable")
+DB, _ := gorm.Open("postgres", $POSTGRES_SRC)
 DB.AutoMigrate(Note{})
 
 var notes []Note
 ```
 
 ## Normal search
+
+### Usage
 ```go
-searchScope1 := gortex.NewSearchScope("english", true, Note{Contents: "brown"})
+gortex.NewSearchScope(clause interface{}, opts ...map[string]interface{})
+```
+
+### Params
+```clause interface{}``` May be a ```struct``` or ```map[string]interface{}``` which specifies the fields and values to search
+
+```opts map[string]interface{}``` List of options which might include:
+
+```"language": string``` Specify [language](http://blog.lostpropertyhq.com/postgres-full-text-search-is-good-enough/#languagesupport) for search
+
+```"exclusive": bool``` Controls whether search fields should be AND'd or OR'd
+
+Note: If ```clause``` is a ```struct```, it will automatically set the table to the struct's type
+
+### Example
+```go
+searchScope1 := gortex.NewSearchScope(Note{Contents: "brown"}, map[string]interface{}{"language": "english"})
 DB.Scopes(searchScope1).Select("*").Find(&notes)
 //// Finds all records with 'brown' in the contents field
 
-searchScope2 := gortex.NewSearchScope("english", false, map[]{}interface{"contents": "brown", "author": "dog"})
+searchScope2 := gortex.NewSearchScope(map[string]interface{}{"contents": "brown", "author": "dog"}, map[string]interface{}{"exclusive": false})
 DB.Scopes(searchScope2).Select("*").Find(&notes)
-//// Finds all records with 'brown' in the contents field OR 'dog' in the author field
+//// Using 'simple' language, finds all records with 'brown' in the contents field OR 'dog' in the author field
 ```
 Note: You must include .Select("*"), which instructs gorm to select all fields in addition to the search rankings
 
 ## Fuzzy search
+### Usage
+```go
+gortex.NewFuzzySearchScope(clause interface{}, opts ...map[string]interface{})
+```
+
+### Params
+```clause interface{}``` May be a ```struct``` or ```map[string]interface{}``` which specifies the fields and values to search
+
+```opts map[string]interface{}``` List of options which might include:
+
+```"exclusive": bool``` Controls whether search fields should be AND'd or OR'd
+
+### Example
 ```go
 gortex.InitFuzzySearch(&DB) //// Creats pg_trgm extension
 gortex.SetFuzzySearchLimit(&DB, limit) //// Optional, sets fuzzy search limit (default is 0.1)
@@ -78,10 +96,22 @@ type SearchSqlFormat interface {
 }
 ```
 
-#### Params
+#### SearchSqlFormat params
 ```field string```: Name of the field
 
 ```opts map[string]interface{}``` The very same map passed into ```gortex.NewCustomSearchScope```
+
+### Usage
+```go
+gortex.NewCustomSearchScope(format SearchSqlFormat, clause interface{}, opts ...map[string]interface{})
+```
+
+### Params
+```clause interface{}``` May be a ```struct``` or ```map[string]interface{}``` which specifies the fields and values to search
+
+```opts map[string]interface{}``` List of options which might include:
+
+```"exclusive": bool``` Controls whether search fields should be AND'd or OR'd
 
 #### Example
 ```go
@@ -99,4 +129,34 @@ searchScope4 := gortex.NewCustomSearchScope(customSearchFormat{}, Note{Author: "
 DB.Scopes(searchScope4).Select("*").Find(&notes)
 //// Finds all records with an author beginning with 'L' and ranks them by length of author
 ```
+## Indexing
 
+### Usage
+```go
+gortex.AutoIndex(db *gorm.DB, language string, clause interface{}, table ...string)
+```
+
+### Params
+```db *gorm.DB``` Instance of gorm.DB on which to add indexes (uses .Exec)
+
+```language string``` Postgres [language](http://blog.lostpropertyhq.com/postgres-full-text-search-is-good-enough/#languagesupport) to be indexed
+
+```clause interface{}``` May be a struct, ```string```, or ```[]string``` containing the fields to be indexed
+
+```table ...string``` Specifies the table to migrate if ```clause``` is a ```string``` or ```[]string```
+
+### Example
+```go
+gortex.AutoIndex(&DB, "english", Note{})
+//// Adds gin indexes idx_notes_content and idx_notes_author
+
+gortex.AutoIndex(&DB, "english", "contents", "notes")
+//// Adds gin index idx_notes_content
+
+gortex.AutoIndex(&DB, "english", "contents", []string{"notes", "author"})
+//// Adds gin indexes idx_notes_content and idx_notes_author
+```
+Note: This function is best-effort, and is not designed to be re-run.  Therefore it will not return errors.  You should verify the indexes manually if you care.
+
+## Contributing
+Feel free to do so!

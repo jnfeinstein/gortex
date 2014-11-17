@@ -189,10 +189,7 @@ func AutoIndex(db *gorm.DB, language string, clause interface{}, table ...string
 	for _, field := range fields {
 		idxName := fmt.Sprintf("idx_%v_%v", actualTable, field)
 		query := fmt.Sprintf("CREATE INDEX %v on %v using gin(to_tsvector('%v', %v))", idxName, scope.Quote(actualTable), language, scope.Quote(field))
-		err := db.Debug().Exec(query).Error
-		if err != nil {
-			return err
-		}
+		db.Exec(query)
 	}
 
 	return nil
