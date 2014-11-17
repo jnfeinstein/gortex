@@ -1,6 +1,6 @@
 # GORTEX
 
-Text search for postgres w/ ORGM using Golang
+Text search for postgres w/ ORM using Golang
 
 ## Overview
 
