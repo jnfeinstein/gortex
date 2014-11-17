@@ -5,6 +5,7 @@ import (
 	"github.com/jnfeinstein/gorm"
 	"github.com/jnfeinstein/gortex"
 	_ "github.com/lib/pq"
+	"os"
 	"testing"
 )
 
@@ -21,8 +22,13 @@ var grassNote Note = Note{Contents: "The grass is always green on the other side
 
 func init() {
 	var err error
-	fmt.Println("testing postgres...")
-	DB, err = gorm.Open("postgres", "dbname=gortex sslmode=disable")
+
+	pgArgs := os.Getenv("POSTGRES_URL")
+	if len(pgArgs) == 0 {
+		pgArgs = "dbname=gortex sslmode=disable"
+	}
+
+	DB, err = gorm.Open("postgres", pgArgs)
 
 	DB.LogMode(false)
 
