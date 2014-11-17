@@ -19,6 +19,8 @@ gortex.NewSearchScope(language string, exclusive bool, clause {}interface)
 
 ```clause {}interface``` May be a ```struct``` or ```map[string]{}interface``` which specifies the fields and values to search
 
+Note: If ```clause``` is a ```struct```, it will automatically set the table to the struct's type
+
 ### Example setup
 ```go
 import (

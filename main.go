@@ -20,7 +20,9 @@ func NewSearchScope(language string, exclusive bool, clause interface{}) (f func
 		case map[string]interface{}:
 			searchTerms = value
 		case interface{}:
-			for _, field := range scopeDB.NewScope(value).Fields() {
+			newScope := scopeDB.NewScope(value)
+			scopeDB = scopeDB.Table(newScope.TableName())
+			for _, field := range newScope.Fields() {
 				if !field.IsBlank {
 					searchTerms[field.DBName] = field.Field.Interface()
 				}
@@ -52,6 +54,6 @@ func NewSearchScope(language string, exclusive bool, clause interface{}) (f func
 		orderStmt := fmt.Sprintf("%s desc", scope.Quote("rank"))
 		scopeDB = scopeDB.Order(orderStmt)
 
-		return scopeDB
+		return
 	}
 }
