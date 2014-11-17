@@ -2,7 +2,7 @@ package gortex_test
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
+	"github.com/jnfeinstein/gorm"
 	"github.com/jnfeinstein/gortex"
 	_ "github.com/lib/pq"
 	"testing"

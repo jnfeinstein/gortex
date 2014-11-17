@@ -2,7 +2,7 @@ package gortex
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
+	"github.com/jnfeinstein/gorm"
 	"regexp"
 	"strings"
 )
